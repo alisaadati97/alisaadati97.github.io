@@ -1,0 +1,74 @@
+.ps-widget {
+    position: relative;
+    float: left;
+    display: inline-block;
+
+    margin: 0 0 0 0;
+    padding: 11px 30px;
+
+    text-align:center;
+    width: auto;
+    background: #ffc20e;
+    border: 1px solid #E4AA00;
+    white-space: nowrap;
+
+    -webkit-tap-highlight-color:transparent;
+
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+
+    transition-duration: .2s;
+    -o-transition-duration: .2s;
+    -moz-transition-duration: .2s;
+    -webkit-transition-duration: .2s;
+
+    cursor:pointer;
+}
+.ps-widget:hover {
+    background: #daa300;
+}
+.ps-widget:focus {
+    outline: none;
+}
+.ps-widget span, .ps-widget small {
+    font-family: "Helvetica Neue", "Helvetica", Helvetica, Arial, sans-serif;
+    text-align:center;
+    word-wrap:normal;
+    color: #000;
+    font-size: 16px;
+    font-weight: 400;
+}
+.ps-widget small {
+    color: #fff;
+}
+.ps-widget.ps-disabled {
+    background: #cdd1d1;
+    border: 1px solid #cdd1d1;
+    box-shadow: none;
+    cursor: default;
+    min-width: 195px;
+}
+.ps-widget.ps-disabled:after {
+    display: none;
+}
+.ps-widget.ps-disabled span {
+    display:none;
+}
+.ps-widget.ps-disabled small {
+    display:block;
+}
+@media screen and (max-width:1024px) {
+}
+@media screen and (max-width:767px) {
+    .ps-widget {
+        width: 100%;
+    }
+    .ps-widget span, .ps-widget small {
+
+    }
+    .product-specs .ps-widget {
+        width: 98px;
+        padding: 10px 0;
+    }
+}

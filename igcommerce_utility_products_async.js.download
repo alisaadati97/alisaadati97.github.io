@@ -1,0 +1,161 @@
+// We load these functions async so they don't tank our mobile cls score.
+// We intentionally avoid adding these scripts "The Drupal Way". 
+// We don't want them aggregated, we only want them loaded async.
+
+jQuery(document).ready(function() {
+  /**
+   * Custom Js for Product Slideshow
+   * On Page Load Flexslider Intilize
+   */
+
+  // tiny helper function to add breakpoints
+  function getGridSize() {
+    return (window.innerWidth < 576) ? 2 :(window.innerWidth < 1033) ? 3 : 4;
+  }
+  // Different settings for cross sell grid 3 for all except small, which is 2
+  function getGridSizeCrossSell() {
+    return (window.innerWidth < 576) ? 2 : 3;
+  }
+  // The Cross sell (Discovery tile) products are only a slideshow on mobile. Removed the flexslider class for every screensize above mobile to prevent odd behaviour and extra bloat when it's not used.
+  function removeFlexCrossSell() {
+            
+  var gridSize = getGridSize();
+  if(gridSize > 2) {
+    jQuery('div.ig-cross-sell-flexslider').addClass('ig-cross-sell-default').removeClass('ig-cross-sell-flexslider');
+    }
+  }
+  removeFlexCrossSell(); // Check for grid size - remove flexslider if not mobile
+
+  // Instantiates the image zooming from elevatezoom
+  function startZoom() {
+     jQuery('.zoom.flex-active-slide img').elevateZoom({
+      // gallery:'ig-product-flexslider', 
+      // galleryActiveClass: 'active-slide',
+      // galleryActiveClass: 'flex-active-slide',
+      zoomWindowFadeIn: 500,
+      zoomWindowFadeOut: 500,
+      easing : true,
+      cursor: 'pointer', 
+      // imageCrossfade: true, // cwi3672 - Crossfade forcing static width on window resize, covering Key Features.
+      zoomWindowWidth:500,
+      zoomWindowHeight:400
+    });
+  }
+  // Adjusts zoomContainer dimensions based on .slides. Prevents zoom window overlapping key features + slideshow thumbs. 
+  function adjustZoom(){
+    var zoomWidth = jQuery('.slides').width();
+    var zoomHeight = jQuery('.slides').height();
+    jQuery('.zoomContainer').css('width', zoomWidth);
+    jQuery('.zoomContainer').css('height', zoomHeight);
+  }
+
+  // Handles window resizing for Overview image zooming.
+  jQuery(window).on("resize", function() {
+    if (getGridSize() == 4) {
+      if (jQuery('.zoomContainer').length == 0) {
+        startZoom();
+      }
+      else {
+        // Zoomcontainer present, adjust zoomeContainer dimensions as slideshow is resized
+        adjustZoom();
+      }
+    } 
+    else {
+      jQuery('.zoomContainer').remove();
+    }
+  });
+
+  // Product Slideshow
+  // Also starts up the imagezooming after the slider loads on desktop 
+  jQuery('.ig-product-flexslider').flexslider({
+    // animation: "slide", // the slide animation breaks the zoom, so we have to use fade instead.
+    animation: "fade",
+    controlNav: "thumbnails",
+    slideshow: false,
+    animationLoop: false,
+    start: function() {
+      if (getGridSize() == 4) {
+      startZoom();
+      }
+      // After the slideshow is built we check for any slides that are 
+      // videos, then add an icon to the thumbnail that has the same 
+      // index as the slide.
+      jQuery( "ul.slides li.slideshow_video" ).each(function( index ) {
+        jQuery( "<span class='fluke-icon fluke-icon-play'></span>" ).insertAfter( ".flex-control-thumbs li:eq(" + jQuery( this ).index() + ") img" );
+      });
+    },
+    before: function(){
+      if (getGridSize() == 4) {
+        jQuery('.zoomContainer').remove();
+      }
+    },           
+    after: function(){
+      if (getGridSize() == 4) {
+        startZoom();
+      }
+    },  
+  });
+
+   //Product  Overview Slideshow
+  jQuery('.ig-overview-flexslider').flexslider({
+    animation: "slide",
+    controlNav: false,
+    slideshow: false,
+    animationLoop: false,          
+  });
+
+  // Related Product & Top-pick accessory Slideshow
+  jQuery('.ig-related-flexslider').flexslider({
+    animation: "slide",
+    animationLoop: false,
+    slideshow: false,
+    controlNav: false,
+    itemWidth: 111, 
+    // itemMargin: 5,
+    //minItems: 2,
+    //maxItems: 4
+    minItems: getGridSize(), // use function to pull in initial value
+    maxItems: getGridSize() // use function to pull in initial value
+  });
+  // Cross sell slideshow is only 3 items - grid size will always be 3
+  jQuery('.ig-cross-sell-flexslider').flexslider({
+    animation: "slide",
+    animationLoop: false,
+    slideshow: false,
+    controlNav: false,
+    itemWidth: 111, 
+    // itemMargin: 5,
+    //minItems: 2,
+    //maxItems: 4
+    minItems: getGridSizeCrossSell(), 
+    maxItems: getGridSizeCrossSell(), 
+  });
+
+  jQuery(window).on("resize", function(){
+    if(jQuery('.ig-related-flexslider .ig-related-flexslider').length > 0) {
+      var gridSize = getGridSize();
+      flexslider.vars.minItems = gridSize;
+      flexslider.vars.maxItems = gridSize;
+    }
+  });
+
+  // cwi-5901 - replaced the colorbox twister with a generic js/css implementation. TODO: Can we remove colorbox module now?
+  let twister = document.querySelector(".overlay-twister"),
+  button = document.querySelector(".btn-twister");
+  // cwi-5901 bug: If there wasn't a twister on the page, we were getting a console error preventing ecommerce elements. 
+  if ( jQuery('.btn-twister').length ){
+    button.addEventListener("click", openTwister);
+
+    function openTwister(){
+      twister.style.display = "Block";
+    }
+
+    window.addEventListener("click", closeTwister);
+
+    function closeTwister(e){
+      if(e.target == twister) {
+        twister.style.display = "none";
+      }
+    }
+  }
+});

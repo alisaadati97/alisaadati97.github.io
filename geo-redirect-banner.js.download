@@ -1,0 +1,723 @@
+/**
+ * @file
+ * Displays the Geo redirect suggestion banner.
+ * @author ryan.ray.neff@fluke.com
+ * 
+ * This script should appear on English only locales at rollout, April 2022.
+ * 
+ * This script is defer loaded. A slug file, 'geopixel.txt' is fetched. 
+ * Using 'page rules', we ask Cloudflare to add two special headers to the slug
+ * file, 'fluke-country' & 'fluke-continent'. Those contain 2 char ISO country 
+ * and continent codes. We grab the current sites country from the header. If 
+ * there is a site better suited to the user, they are presented with an option
+ * banner.
+ * 
+ * The country name and language presented as options in the banner should match
+ * those used in the language picker.
+ * 
+ * Banner logic:
+ * If the user ignores the banner, it will be presented on every page until they
+ * use it to navigate to a recommended site, open the language picker using the 
+ * "Other country or region" option, or close the banner.
+ * 
+ * If the user clicks the close icon on the banner, the user will not be 
+ * presented with the banner again until they close their browser.
+ * 
+ * If the user chooses "Other country or region" from the dropdown in the 
+ * banner, then the language picker should open. Regardless of if the user 
+ * navigates to a different site from the language picker, the user should not 
+ * be presented with the banner again until they close their browser.
+ * 
+ * If the user chooses a recommended site from the dropdown, they will be taken 
+ * to that site, and not presented with another banner until they close their 
+ * browser.
+ * 
+ * Instead of a cookie, we store user country & site data in `Session storage`. 
+ * The session storage goes away when the user closes their browser.
+ * 
+ * During testing, you can manually delete this session storage using dev tools.
+ * 
+ * @todo: can we move const locales and continents to the slug file? Might have 
+ *   to tweak logic a bit.
+ * @todo: can we convert this to typescript for better support in old browsers?
+ */
+
+// Site the user is currently on.
+const currentLocale = document.documentElement.lang.toUpperCase().slice(-2);
+// Save users choice in local storage so the user choice will persist even
+// if the user navigates away from page.
+const geoIpLocalStorage = 'fluke_geo_ip_redirect';
+// Countries mapped to supported Fluke locales.
+const locales = {
+  AR: {
+    'es-ar': {
+      locale: 'es-ar',
+      country: 'Argentina',
+      language: 'Español'
+    }
+  },
+  AT: {
+    'de-at': {
+      locale: 'de-at',
+      languageName: 'Deutsch',
+      countryName: 'Austria',
+    }
+  },
+  AU: {
+    'en-au': {
+      locale: 'en-au',
+      languageName: 'English',
+      countryName: 'Australia',
+    }
+  },
+  BE: {
+    'fr-be': {
+      locale: 'fr-be',
+      languageName: 'Français',
+      countryName: 'Belgium',
+    },
+    'nl-be': {
+      locale: 'nl-be',
+      languageName: 'Dutch',
+      countryName: 'Belgium',
+    }
+  },
+  BO: {
+    'es-bo': {
+      locale: 'es-bo',
+      languageName: 'Español',
+      countryName: 'Bolivia',
+    },
+  },
+  BR: {
+    'pt-br': {
+      locale: 'pt-br',
+      languageName: 'Português',
+      countryName: 'Brazil',
+    },
+  },
+  CA: {
+    'en-ca': {
+      locale: 'en-ca',
+      languageName: 'English',
+      countryName: 'Canada',
+    },
+    'fr-ca': {
+      locale: 'fr-ca',
+      languageName: 'Français',
+      countryName: 'Canada',
+    }
+  },
+  CH: {
+    'de-ch': {
+      locale: 'de-ch',
+      languageName: 'Deutsch',
+      countryName: 'Switzerland',
+    },
+    'fr-ch': {
+      locale: 'fr-ch',
+      languageName: 'Français',
+      countryName: 'Switzerland',
+    }
+  },
+  CL: {
+    'es-cl': {
+      locale: 'es-cl',
+      languageName: 'Español',
+      countryName: 'Chile',
+    }
+  },
+  CN: {
+    'cn': {
+      locale: 'cn',
+      languageName: '中国',
+      countryName: 'China',
+    }
+  },
+  CO: {
+    'es-co': {
+      locale: 'es-co',
+      languageName: 'Español',
+      countryName: 'Colombia',
+    }
+  },
+  CR: {
+    'es-cr': {
+      locale: 'es-cr',
+      languageName: 'Español',
+      countryName: 'Costa Rica',
+    }
+  },
+  CZ: {
+    'cs-cz': {
+      locale: 'cs-cz',
+      languageName: 'Czech',
+      countryName: 'Czechia',
+    }
+  },
+  DE: {
+    'de-de': {
+      locale: 'de-de',
+      languageName: 'Deutsch',
+      countryName: 'Germany',
+    }
+  },
+  DK: {
+    'da-dk': {
+      locale: 'da-dk',
+      languageName: 'Dansk',
+      countryName: 'Denmark',
+    }
+  },
+  DO: {
+    'es-do': {
+      locale: 'es-do',
+      languageName: 'Español',
+      countryName: 'Dominican Republic',
+    }
+  },
+  EC: {
+    'es-ec': {
+      locale: 'es-ec',
+      languageName: 'Español',
+      countryName: 'Ecuador',
+    }
+  },
+  ES: {
+    'es-es': {
+      locale: 'es-es',
+      languageName: 'Español',
+      countryName: 'Spain',
+    }
+  },
+  FI: {
+    'fi-fi': {
+      locale: 'fi-fi',
+      languageName: 'Finish',
+      countryName: 'Finland',
+    }
+  },
+  FR: {
+    'fr-fr': {
+      locale: 'fr-fr',
+      languageName: 'Français',
+      countryName: 'France',
+    }
+  },
+  GB: {
+    'en-gb': {
+      locale: 'en-gb',
+      languageName: 'English',
+      countryName: 'United Kingdom',
+    }
+  },
+  GT: {
+    'es-gt': {
+      locale: 'es-gt',
+      languageName: 'Español',
+      countryName: 'Guatemala',
+    }
+  },
+  ID: {
+    'en-id': {
+      locale: 'en-id',
+      languageName: 'English',
+      countryName: 'Indonesia',
+    },
+    'id-id': {
+      locale: 'id-id',
+      languageName: 'Bahasa',
+      countryName: 'Indonesia',
+    }
+  },
+  IE: {
+    'en-ie': {
+      locale: 'en-ie',
+      languageName: 'English',
+      countryName: 'Ireland',
+    }
+  },
+  IN: {
+    'en-in': {
+      locale: 'en-in',
+      languageName: 'English',
+      countryName: 'India',
+    }
+  },
+  IT: {
+    'it-it': {
+      locale: 'it-it',
+      languageName: 'Italiano',
+      countryName: 'Italy',
+    }
+  },
+  JP: {
+    'ja-jp': {
+      locale: 'ja-jp',
+      languageName: '日本',
+      countryName: 'Japan',
+    }
+  },
+  KR: {
+    'ko-kr': {
+      locale: 'ko-kr',
+      languageName: '한국어',
+      countryName: 'South Korea',
+    }
+  },
+  MX: {
+    'es-mx': {
+      locale: 'es-mx',
+      languageName: 'Español',
+      countryName: 'Mexico',
+    }
+  },
+  MY: {
+    'en-my': {
+      locale: 'en-my',
+      languageName: 'English',
+      countryName: 'Malaysia',
+    }
+  },
+  NL: {
+    'nl-nl': {
+      locale: 'nl-nl',
+      languageName: 'Dutch',
+      countryName: 'Netherlands',
+    }
+  },
+  NO: {
+    'no-no': {
+      locale: 'no-no',
+      languageName: 'Norsk',
+      countryName: 'Norway',
+    }
+  },
+  PE: {
+    'es-pe': {
+      locale: 'es-pe',
+      languageName: 'Español',
+      countryName: 'Peru',
+    }
+  },
+  PH: {
+    'en-ph': {
+      locale: 'en-ph',
+      languageName: 'English',
+      countryName: 'Philippines',
+    }
+  },
+  PL: {
+    'pl-pl': {
+      locale: 'pl-pl',
+      languageName: 'Polski',
+      countryName: 'Poland',
+    }
+  },
+  PT: {
+    'pt-pt': {
+      locale: 'pt-pt',
+      languageName: 'Português',
+      countryName: 'Portugal',
+    }
+  },
+  RU: {
+    'ru-ru': {
+      locale: 'ru-ru',
+      languageName: 'Russian',
+      countryName: 'Russia',
+    }
+  },
+  SE: {
+    'sv-se': {
+      locale: 'sv-se',
+      languageName: 'Swedish',
+      countryName: 'Sweden',
+    }
+  },
+  SG: {
+    'en-sg': {
+      locale: 'en-sg',
+      languageName: 'English',
+      countryName: 'Singapore',
+    }
+  },
+  SV: {
+    'es-sv': {
+      locale: 'es-sv',
+      languageName: 'Español',
+      countryName: 'El Salvador',
+    }
+  },
+  TH: {
+    'en-th': {
+      locale: 'en-th',
+      languageName: 'English',
+      countryName: 'Thailand',
+    },
+    'th-th': {
+      locale: 'th-th',
+      languageName: 'ภาษาไทย',
+      countryName: 'Thailand',
+    }
+  },
+  TR: {
+    'tr-tr': {
+      locale: 'tr-tr',
+      languageName: 'Türkçe',
+      countryName: 'Turkey',
+    }
+  },
+  TW: {
+    'zh-tw': {
+      locale: 'zh-tw',
+      languageName: 'Chinese Traditional',
+      countryName: 'Taiwan',
+    }
+  },
+  US: {
+    'en-us': {
+      locale: 'en-us',
+      languageName: 'English',
+      countryName: 'United States',
+    },
+    'es-us': {
+      locale: 'es-us',
+      languageName: 'Español',
+      countryName: 'United States',
+    }
+  },
+  UY: {
+    'es-uy': {
+      locale: 'es-uy',
+      languageName: 'Español',
+      countryName: 'Uruguay',
+    }
+  },
+  VE: {
+    'es-ve': {
+      locale: 'es-ve',
+      languageName: 'Español',
+      countryName: 'Venezuela',
+    }
+  },
+  VN: {
+    'en-vn': {
+      locale: 'en-vn',
+      languageName: 'English',
+      countryName: 'Vietnam',
+    },
+    'vi-vn': {
+      locale: 'vi-vn',
+      languageName: 'Tiếng Việt Vietnam',
+      countryName: 'Vietnam',
+    }
+  }
+}
+
+// If we don't a country specific site, route to fallback by continent.
+const continents = {
+  NA: {
+    'en-us': {
+      locale: 'en-us',
+      languageName: 'English',
+      countryName: 'United States',
+    }
+  },
+  SA: {
+    'es-mx': {
+      locale: 'es-mx',
+      languageName: 'Español',
+      countryName: 'Mexico',
+    }
+  },
+  AS: {
+    'zh-tw': {
+      locale: 'zh-tw',
+      languageName: 'Chinese Traditional',
+      countryName: 'Taiwan',
+    }
+  },
+  EU: {
+    'en': {
+      locale: 'en',
+      languageName: 'English',
+      countryName: 'Global',
+    },
+    'fr': {
+      locale: 'fr',
+      languageName: 'Français',
+      countryName: 'Global',
+    }
+  },
+  OC: {
+    'en-au': {
+      locale: 'en-au',
+      languageName: 'English',
+      countryName: 'Australia',
+    }
+  },
+  AF: {
+    'en': {
+      locale: 'en',
+      languageName: 'English',
+      countryName: 'Global',
+    },
+    'fr': {
+      locale: 'fr',
+      languageName: 'Français',
+      countryName: 'Global',
+    }
+  },
+  AN: {
+    'en': {
+      locale: 'en',
+      languageName: 'English',
+      countryName: 'Global',
+    },
+    'fr': {
+      locale: 'fr',
+      languageName: 'Français',
+      countryName: 'Global',
+    }
+  }
+}
+
+/**
+ * Adds a banner prompting user to go to a locale based on their country.
+ * 
+ * Parses param and looks up the appropriate sites. Puts site links and names
+ * in a banner. If the user dismisses or uses the links in the banner, it will
+ * not be presented to the user again.
+ * Rollout initially in English locales only. (We don't have translations).
+ * 
+ * @param suggestedSite: 2 char string. International country or continent code.
+ * 
+ * @todo: Add translations. 
+ * @todo: We should link to current page in suggested language, but first we
+ *   need to rewire 404 pages to Algolia search.
+ */
+function suggestionBanner(suggestedSite = 0) {
+  let suggested_options = '';
+  // Create the dropdown options.
+  if (suggestedSite && locales.hasOwnProperty(suggestedSite)) {
+    Object.keys(locales[suggestedSite]).forEach(key => {
+      if (Object.keys(locales[suggestedSite]).length === 1) {
+        // If there is only one language, use only the country name in the options.
+        suggested_options += `<option value="/${locales[suggestedSite][key].locale}">${locales[suggestedSite][key].countryName}</option>`;
+      }
+      else {
+        // If there are multiple languages, use both country and language in option.
+        suggested_options += `<option value="/${locales[suggestedSite][key].locale}">${locales[suggestedSite][key].countryName} ${locales[suggestedSite][key].languageName}</option>`;        
+      }
+    });
+  }
+  else {
+    // Either we don't have a site for that country, or we don't have country data, so work with the continent.
+    Object.keys(continents[suggestedSite]).forEach(key => {
+      suggested_options += `<option value="/${continents[suggestedSite][key].locale}">${continents[suggestedSite][key].countryName} ${continents[suggestedSite][key].languageName}</option>`;
+    });
+  }
+  const redirect_message = Drupal.t('See content specific to your location.');
+  const confirm_button = Drupal.t('Continue');
+  // Option for the language picker.
+  suggested_options += `<option value="other-country">Other country or region</option>`;
+  const geoIpBanner = `
+    <nav id="geo-ip-wrap">
+      <label for="country-select" class="geo-ip-copy"> 
+        <strong>
+          ${redirect_message}
+        </strong>
+      </label>
+
+      <select id="geo-ip-select" name="country-select" class="button-white geo-ip-actions">
+        ${suggested_options}
+      </select>
+    
+      <div id="geo-ip-actions">
+        <button id="geo-ip-confirm" aria-label="Confirm selection and navigate to site" onclick="sessionStorage.removeItem(geoIpLocalStorage); window.location.href = document.getElementById('geo-ip-select').value">
+          ${confirm_button}
+        </button>
+
+        <a id="geo-ip-close" href="#" aria-label="Exit" onclick="sessionStorage.setItem(geoIpLocalStorage, 'declined'); document.getElementById('geo-ip-wrap').classList.add('slideup'); document.getElementById('geo-ip-wrap').remove();">
+          <svg id="svg-close">
+            <circle cx="12" cy="12" r="11" stroke="white" stroke-width="2" fill="none" />
+            <path stroke="white" stroke-width="2" fill="none" d="M6.25,6.25,17.75,17.75" />
+            <path stroke="white" stroke-width="2" fill="none" d="M6.25,17.75,17.75,6.25" />  
+          </svg>
+        </a>
+      </div>
+    </nav>    
+
+    <style>
+      #geo-ip-wrap {
+        background: #5F676A;
+        color: white;
+        padding: 5px;
+        position: fixed;
+        bottom: 0;
+        text-align: center;
+        width: 100%;
+        animation-name: slideDown;
+        animation-duration: .25s; 
+        animation-timing-function: ease;             
+      }
+      #geo-ip-actions,
+      #geo-ip-select {
+        margin: 5px;
+      }
+      @media only screen and (max-width: 526px) {
+        #geo-ip-actions button {
+          padding: 1.1rem;
+          margin-right: 0;
+        }
+        #geo-ip-select {
+          padding: 11px 20px 11px 0px !important;
+        }
+        #geo-ip-actions,
+        #geo-ip-select {
+          margin-left: 0 !important;
+        }
+        #geo-ip-close {
+          padding: 10px 0 10px 5px !important;
+        }
+      }
+      #geo-ip-actions,
+      .geo-ip-copy {
+        display: inline-block;
+      }
+      #geo-ip-wrap.slideup {
+        animation-name: slideup;
+      }
+      @keyframes slideDown {
+        from {
+          transform: translateY(-100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideup {
+        from {
+          transform: translateY(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateY(-100%);
+          opacity: 0;
+        }
+      }
+      #geo-ip-select {
+        padding: 11px 30px 11px 11px;
+        margin: 0 10px 0;
+        background-image:
+          linear-gradient(45deg, transparent 50%, gray 50%),
+          linear-gradient(135deg, gray 50%, transparent 50%);
+        background-position:
+          calc(100% - 17px) calc(1em + 2px),
+          calc(100% - 12px) calc(1em + 2px);
+        background-size:
+          5px 5px,
+          5px 5px;
+        background-repeat: no-repeat;
+      }
+      #geo-ip-close {
+        padding: 10px;
+      }
+      #svg-close {
+        cursor: pointer;
+        height: 24px;
+        width: 24px;
+        vertical-align: middle;
+      }
+      #svg-close > path,
+      #svg-close > circle {
+        stroke: white;
+        fill: none;
+      }
+      #svg-close:hover > circle {
+        filter: brightness(85%);
+      }
+    </style>
+  `;
+
+  // Insert banner after the footer.
+  document.getElementById('site-footer').insertAdjacentHTML('afterend', geoIpBanner);
+  // Watch the dropdown selector. If user chooses "other", open language picker.
+  const geoSelector = document.getElementById('geo-ip-select');
+  geoSelector.addEventListener('change', (event) => {
+    if (event.target.value === 'other-country') {
+      document.getElementById('language-picker').click(); 
+      sessionStorage.setItem(geoIpLocalStorage, 'declined');
+      document.getElementById('geo-ip-wrap').remove();
+    }
+  });
+}
+
+/**
+ * Checks if we need to present the GeoIp banner & sets storage variable.
+ * 
+ * If the user has previously closed the banner, used the banner, or is on 'en'
+ * or 'fr' the banner status will be 'declined' and nothing will be done.
+ */
+function geoIpStartup() {
+  // Check if we already checked for a country match.
+  // The results will be in session storage.
+  if (sessionStorage.getItem(geoIpLocalStorage)) {
+    const geoIpStatus = sessionStorage.getItem(geoIpLocalStorage);
+    // Check if user has already seen the banner and declined,
+    // or manually navigated to the recommended locale.
+    if (geoIpStatus !== 'declined' && geoIpStatus !== currentLocale) {
+      // Send the suggested locale to the suggestionBanner.
+      suggestionBanner(geoIpStatus);
+    }
+  } 
+  else {
+    var userCountry = null; 
+    var userContinent = null;
+    // Get user country and continent.
+    let pixel_path = '/sites/all/themes/ig_neato/js/geobanner/geopixel.txt';
+    // Cloudflare adds some headers to this file with users country and contintent.
+    fetch(pixel_path).then(function(response) {
+      userCountry = response.headers.get('fluke-country'); // request.cf.country
+      userContinent = response.headers.get('fluke-continent'); // request.cf.continent
+      if (userCountry === null) {
+        console.error("Fluke: GeoIP banner is failing. It will only work on a site delivered via Cloudflare.");
+        return;
+        // For testing locally - don't forget this is 'EN' only at launch.
+        // userCountry = 'AU';
+      }
+      if (userCountry === currentLocale) {
+        // User is on the correct site, set the storage so we don't keep checking.
+        sessionStorage.setItem(geoIpLocalStorage, 'declined');
+        // console.log("You got a GEO ip match:", 'userCountry:', userCountry, 'currentLocale', currentLocale);
+      } // Make sure the users country is a country we have a site for.
+      else if (locales.hasOwnProperty(userCountry)) {
+        // Check if the locales match.
+        if (userCountry != currentLocale) {
+           // Save this in session storage so we don't have to evaluate on the next page.
+          sessionStorage.setItem(geoIpLocalStorage, userCountry);
+          // Send the suggested locale to the suggestionBanner.
+          suggestionBanner(userCountry);
+        }
+      }
+      // If we don't have a country, check if we have a continent. 
+      else if (userContinent) {
+        if (currentLocale === 'EN' || currentLocale === 'FR') {
+          // en and fr are generic locales. If we're already on one of those, leave em alone.
+          sessionStorage.setItem(geoIpLocalStorage, 'declined');
+        }
+        else {    
+          // Save this in session storage so we don't have to evaluate on the next page.
+          sessionStorage.setItem(geoIpLocalStorage, userContinent);
+          // Send the suggested locale to the suggestionBanner.
+          suggestionBanner(userContinent);
+        }
+      }
+    }); 
+  }
+}
+
+geoIpStartup();

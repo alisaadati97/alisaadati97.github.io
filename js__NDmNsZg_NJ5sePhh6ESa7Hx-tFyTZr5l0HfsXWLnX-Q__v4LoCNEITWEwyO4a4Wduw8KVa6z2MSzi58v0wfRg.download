@@ -1,0 +1,230 @@
+(function ($) {
+  'use strict';
+  Drupal.behaviors.igcommerce_utility_nav = {
+    attach: function (context, settings) {
+      // We're using the mmenu modules javascript library. The Drupal interface
+      // for the module only exsists to save settings and pass them to
+      // javascript. We're circumventing the php side entirely by manually
+      // instantiating here.
+
+      // This variable ensures that the Desktop Nav is only created once.
+      // When not on mobile, the nav is embeded in the html.
+      let desktop_nav_needs_setup = Drupal.settings.igcommerce_utility_nav.desktop_nav_needs_setup;
+      // This variable ensures that the wtb_nav is only created once.
+      let wtb_nav_needs_setup = true;
+      // This variable ensures that the ecomm_nav is only created once.
+      let ecomm_nav_needs_setup = true;
+      // Variable for determining mobile or desktop.
+      let isMobile;
+      // Grab the path to the flat html file from the Drupal settings.
+      const desktop_nav_path = Drupal.settings.igcommerce_utility_nav.desktop_nav_path;
+      // Grab the active-trail desktop category from the Drupal settings.
+      const desktop_active_trail = Drupal.settings.igcommerce_utility_nav.desktop_active_trail;
+
+      // Checks a hidden div that gets different display properties based on screensize.
+      function indicatorCheck() {
+        // The css is currently set to display:none by default, display:block at 1280px
+        if ($('#mobile-indicator').css("display") == "none"){
+          isMobile = false;
+        }
+        else {
+          isMobile = true;
+          // Setup the desktop nav.
+          setupDesktopNav();
+        }
+      };
+
+      // Utility function to close stuff when window is resized.
+      function closeOnResize() {
+        // Re-check for mobile/desktop
+        indicatorCheck();
+        // close the mmenu
+        $('#wtb-nav-clone').mmenu().trigger("close.mm");
+        // hide the desktop nav
+        $("#wtb-nav-button").removeClass("active");
+        $("#wtb-nav").slideUp(200, "easeInOutSine");
+        // close the mmenu
+        $('#ecomm-nav-clone').mmenu().trigger("close.mm");
+        // hide the desktop nav
+        $("#ecomm-nav-button").removeClass("active");
+        $("#ecomm-nav").slideUp(200, "easeInOutSine");
+        // Close the rfq form.
+        // CWI-5918: Automatically closing the RFQ form is causing usability issues, only for Safari. This is more noticable on iPhone but I can also replicate on iPad.
+        // When the keyboard loads, it triggers the closeOnResize, making the user need to open the form each time. I am just preventing this from auto closing on all screen sizes, but we could try to
+        // target Safari specifically.
+        if ($(window ).width() > 768){
+          $("#rfq-nav-form").slideUp(200, "easeInOutSine");
+        }
+      }
+      // Fires a function when the window is resized.
+      window.onresize = closeOnResize;
+
+      // This is instantiates the mmenu when the user clicks on the open button
+      // on mobile/tablet only. It is called conditionally based on the
+      // logic below.
+      function instantiate_wtb_mmenu() {
+        $("#wtb-nav-clone").mmenu( {
+          "offCanvas": {
+            "enabled": true,
+            "modal": false,
+            "moveBackground": true,
+            "position": "right",
+            "zposition": "front"
+          },
+          "header":
+            {
+              "add": true,
+              "content": "<a id='wtb-closer' aria-label='Close the where to buy navigation menu' class='closer fluke-icon fluke-icon-close'></a>",
+              "update": true
+            },
+        });
+        // Automatically opens the menu when it's created.
+        $('#wtb-nav-clone').mmenu().trigger("open.mm");
+        // This makes the "X" button inside the lang-picker work.
+        $("#wtb-closer").click(function() {
+           $('#wtb-nav-clone').mmenu().trigger("close.mm");
+        });
+        // https://mmenu.frebsite.nl/tutorials/off-canvas/open-and-close-the-menu.html
+      } // end instantiate_wtb_mmenu
+
+      // This is instantiates the mmenu when the user clicks on the open button
+      // on mobile/tablet only. It is called conditionally based on the
+      // logic below.
+      function instantiate_ecomm_mmenu() {
+        $("#ecomm-nav-clone").mmenu( {
+          "offCanvas": {
+            "enabled": true,
+            "modal": false,
+            "moveBackground": true,
+            "position": "right",
+            "zposition": "front"
+          },
+          "header":
+            {
+              "add": true,
+              "content": "<a id='ecomm-closer' aria-label='Close the e-commerce navigation menu' class='closer fluke-icon fluke-icon-close'></a>",
+              "update": true
+            },
+        });
+        // Automatically opens the menu when it's created.
+        $('#ecomm-nav-clone').mmenu().trigger("open.mm");
+        // This makes the "X" button inside the lang-picker work.
+        $("#ecomm-closer").click(function() {
+           $('#ecomm-nav-clone').mmenu().trigger("close.mm");
+        });
+        // https://mmenu.frebsite.nl/tutorials/off-canvas/open-and-close-the-menu.html
+      } // end instantiate_ecomm_mmenu
+
+      // The open/close button in the main nav. On desktop, it will show/hide a <ul>.
+      // On mobile, the first time this button is clicked, we clone the nav <ul> and
+      // instantiate mmenu. (We don't auto-instantiate, because that'll slow down
+      // the load time on every page).
+      // The second time this button is clicked on mobile, it will
+      // toggle the mmenu open/closed.
+      $('#wtb-nav-button').click(function() {
+        // Rather than check screen size to determine mobile/desktop, we'll
+        // check the css of #mobile-indicator.
+        if (isMobile) {
+          // We know we're on desktop here, so we want to toggle visibility of
+          // The dropdown. Css sibling selector shows the actual menu.
+            $(this).toggleClass("active");
+            $("#wtb-nav").slideToggle(200, "easeInOutSine");
+            // Close the ecomm nav if it's open.
+            $('#ecomm-nav-button').removeClass("active");
+            $("#ecomm-nav").slideUp(200, "easeInOutSine");
+            // Close the rfq form.
+            $("#rfq-nav-form").slideUp(200, "easeInOutSine");
+        }
+        else {
+          // We know we're on mobile. Let's get mmenu fired up.
+          // We only need to setup mmenu the first time this button is clicked on mobile.
+          if (wtb_nav_needs_setup) {
+            // If there is only one wtb link, then it won't have a child ul
+            // dropdown list to turn into an mmenu.
+            const wtb_child_check = document.getElementById('wtb-nav');
+            if (wtb_child_check) {
+              // When mmenu is instantiated it will pull the element out of the
+              // DOM, which would break the desktop version. We want to clone the
+              // <ul> before we instantiate.
+              $("#wtb-nav").clone().attr('id', 'wtb-nav-clone').appendTo("#wtb-nav");
+              instantiate_wtb_mmenu();
+            }
+            // Make sure this only executes once.
+            wtb_nav_needs_setup = false;
+          }
+          else {
+            // Toggles the mmenu open/close.
+            if ($("#wtb-nav-clone").hasClass("mm-opened")) {
+              $('#wtb-nav-clone').mmenu().trigger("close.mm");
+            } else {
+              $('#wtb-nav-clone').mmenu().trigger("open.mm");
+            }
+          }
+        } // end else
+      }); // end click
+
+      // The open/close button in the main nav. On desktop, it will show/hide a <ul>.
+      // On mobile, the first time this button is clicked, we clone the nav <ul> and
+      // instantiate mmenu. (We don't auto-instantiate, because that'll slow down
+      // the load time on every page).
+      // The second time this button is clicked on mobile, it will
+      // toggle the mmenu open/closed.
+      $('#ecomm-nav-button').click(function() {
+        // Rather than check screen size to determine mobile/desktop, we'll
+        // check the css of #mobile-indicator.
+        if (isMobile) {
+          // We know we're on desktop here, so we want to toggle visibility of
+          // The dropdown. Css sibling selector shows the actual menu.
+          $(this).toggleClass("active");
+          $("#ecomm-nav").slideToggle(200, "easeInOutSine");
+          // Close the wtb nav if it's open.
+          $('#wtb-nav-button').removeClass("active");
+          $("#wtb-nav").slideUp(200, "easeInOutSine");
+          // Close the rfq form.
+          $("#rfq-nav-form").slideUp(200, "easeInOutSine");
+        }
+        else {
+          // We know we're on mobile. Let's get mmenu fired up.
+          // We only need to setup mmenu the first time this button is clicked on mobile.
+          if (ecomm_nav_needs_setup) {
+            // When mmenu is instantiated it will pull the element out of the
+            // DOM, which would break the desktop version. We want to clone the
+            // <ul> before we instantiate.
+            $("#ecomm-nav").clone().attr('id', 'ecomm-nav-clone').appendTo("#ecomm-nav");
+            instantiate_ecomm_mmenu();
+            // Make sure this only executes once.
+           ecomm_nav_needs_setup = false;
+          }
+          else {
+            // Toggles the mmenu open/close.
+            if ($("#ecomm-nav-clone").hasClass("mm-opened")) {
+              $('#ecomm-nav-clone').mmenu().trigger("close.mm");
+            } else {
+              $('#ecomm-nav-clone').mmenu().trigger("open.mm");
+            }
+          }
+        } // end else
+      }); // end click
+
+      function setupDesktopNav() {
+        if (desktop_nav_needs_setup) {
+          // Load the file containing the complete nav structure, and swap it out for the stub.
+          $( "#block-igcommerce-utility-nav-ig-primary-nav > .navbar-nav.nav" ).load(desktop_nav_path, function() {
+            // The desktop setup only needs to happen once.
+            // This won't come into play unless the user resizes the window.
+            desktop_nav_needs_setup = false;
+          });
+        }
+      }
+      // Set the active trail indicator.
+      $(".navbar-nav > li." + desktop_active_trail + " > a.dropdown-toggle").addClass("active-trail active");
+      // On page load, sets the variable `ismobile` to true or false,
+      // also fires the desktop Nav instantiation. Or whatevs. Like I even care.
+      indicatorCheck();
+    }
+  };
+}(jQuery));
+
+
+;/*})'"*/
+;/*})'"*/

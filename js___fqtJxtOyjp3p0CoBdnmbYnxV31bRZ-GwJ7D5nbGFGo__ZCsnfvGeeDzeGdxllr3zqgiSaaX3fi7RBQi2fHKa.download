@@ -1,0 +1,65 @@
+(function ($) {
+  'use strict';
+  Drupal.behaviors.igcommerce_utility_lang_picker = {
+    attach: function (context, settings) {
+      // We're using the mmenu modules javascript library. The Drupal interface
+      // for the module only exsists to save settings and pass them to 
+      // javascript. We're circumventing the php side entirely by manually
+      // instantiateing here.  
+
+      // This variable ensures that the picker is only created once.        
+      let picker_loader = true;
+      // Grab the translated title from the Drupal settings.
+      const picker_title = Drupal.settings.igcommerce_utility_lang_picker.picker_title;
+      // Grab the path to the flat html file from the Drupal settings.
+      const flat_path = Drupal.settings.igcommerce_utility_lang_picker.flat_path;
+
+      // The first time the picker open is clicked, this adds the html to the
+      // DOM from a flat file, instantiates the mmenu, opens it, and binds 
+      // the closing functionality to the close button inside the menu. 
+      // All subsequent clicks to the opener will only open/close the menu.
+      $('#language-picker').click(function() {
+        // Checks to see if we've already executed this code.
+        if (picker_loader) {
+          // This grabs the flat html and inserts it into the dom. After that
+          // is complete, it runs the instantiation/open the menu/sets up close button.
+          $( "#picker-vassal" ).load(flat_path, function() {
+            // Instantiates the mmenu.
+            $("#country-picker-mobile").mmenu( {
+              "offCanvas": {
+                "enabled": true,
+                "modal": false,
+                "moveBackground": true,
+                "position": "right",
+                "zposition": "front"
+              },
+              "header":
+              {
+                "add": true,
+                "content": "<a id='lang-closer' aria-label='Close the country selector navigation' class='closer fluke-icon fluke-icon-close'></a><span id='picker-title'>" + picker_title + "</span>",
+                "update": true
+              },
+              // This adds the dark theme, but we're overiding all the styles, so it's not helpful.
+              // "classes": "mm-black",
+            });
+            // Used for mmenu api functions.
+            // https://mmenu.frebsite.nl/tutorials/off-canvas/open-and-close-the-menu.html
+            var mmenu_api = $("#country-picker-mobile").data( "mmenu" );
+            // Automatically opens the menu when it's created.
+            mmenu_api.open();
+            // This makes the "X" button inside the lang-picker work.
+            $("#lang-closer").click(function() {
+               mmenu_api.close();
+            });
+          }); // End .load
+          // Make sure this only executes once.
+          picker_loader = false;
+        } // end if
+      }); // end click
+    }
+  };
+}(jQuery));
+
+
+;/*})'"*/
+;/*})'"*/
