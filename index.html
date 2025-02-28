@@ -148,16 +148,38 @@
             document.getElementById('viewWishlistResult').innerHTML = 
                 `🔍 Fetching wishlist for @${username}...`;
 
-            const viewData = {
-                action: 'view',
-                username: username
-            };
+            try {
+                const viewData = {
+                    action: 'view',
+                    username: username
+                };
 
-            // Send data to bot
-            tg.sendData(JSON.stringify(viewData));
-            
-            // Clear just the input field, but stay on the same section
-            document.getElementById('usernameToView').value = '';
+                console.log('Sending data to bot:', viewData);
+                
+                // Make sure Telegram WebApp is initialized
+                if (!window.Telegram.WebApp) {
+                    throw new Error('Telegram WebApp not initialized');
+                }
+
+                // Send data to bot
+                window.Telegram.WebApp.sendData(JSON.stringify(viewData));
+                console.log('Data sent successfully');
+
+            } catch (error) {
+                console.error('Error sending data:', error);
+                document.getElementById('viewWishlistResult').innerHTML = 
+                    `❌ Error: ${error.message}`;
+            }
+        }
+
+        // Add initialization check
+        window.onload = function() {
+            if (window.Telegram.WebApp) {
+                window.Telegram.WebApp.ready();
+                console.log('Telegram WebApp initialized');
+            } else {
+                console.error('Telegram WebApp not available');
+            }
         }
     </script>
 </body>
