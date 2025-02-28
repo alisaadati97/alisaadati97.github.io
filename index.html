@@ -5,7 +5,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto;
             color: var(--tg-theme-text-color);
             background: var(--tg-theme-bg-color);
             padding: 20px;
@@ -33,41 +33,106 @@
             border-radius: 8px;
             cursor: pointer;
             width: 100%;
+            margin-bottom: 10px;
+        }
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        .welcome-text {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        #viewWishlistResult {
+            white-space: pre-line;
+            padding: 15px;
+            border-radius: 8px;
+            background: var(--tg-theme-secondary-bg-color);
+            margin-top: 15px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="form-group">
+        <!-- Welcome Section -->
+        <section id="welcomeSection" class="section active">
+            <h2 class="welcome-text">👋 Welcome to Wishlist Bot!</h2>
+            <p class="welcome-text">What would you like to do?</p>
+            <button class="button" onclick="showSection('createWishlist')">📝 Create Wishlist</button>
+            <button class="button" onclick="showSection('viewWishlist')">🔍 View Wishlist</button>
+        </section>
+
+        <!-- Create Wishlist Section -->
+        <section id="createWishlist" class="section">
             <h2>📝 Create Wishlist</h2>
-            <input type="date" class="input-field" id="birthday" placeholder="Birthday">
-        </div>
-        <div class="form-group">
-            <input type="text" class="input-field" id="interests" placeholder="Interests (comma separated)">
-        </div>
-        <div class="form-group">
-            <input type="text" class="input-field" id="likes" placeholder="Likes (comma separated)">
-        </div>
-        <div class="form-group">
-            <input type="text" class="input-field" id="dislikes" placeholder="Dislikes (comma separated)">
-        </div>
-        <button class="button" onclick="submitWishlist()">Save Wishlist</button>
+            <div class="form-group">
+                <input type="date" class="input-field" id="birthday" required>
+            </div>
+            <div class="form-group">
+                <input type="text" class="input-field" id="interests" 
+                       placeholder="Enter 5 interests (comma separated)" required>
+            </div>
+            <div class="form-group">
+                <input type="text" class="input-field" id="likes" 
+                       placeholder="Enter 5 things you LIKE (comma separated)" required>
+            </div>
+            <div class="form-group">
+                <input type="text" class="input-field" id="dislikes" 
+                       placeholder="Enter 5 things you DISLIKE (comma separated)" required>
+            </div>
+            <button class="button" onclick="submitWishlist()">Save Wishlist</button>
+            <button class="button" onclick="showSection('welcomeSection')">Back to Menu</button>
+        </section>
+
+        <!-- View Wishlist Section -->
+        <section id="viewWishlist" class="section">
+            <h2>🔍 View Wishlist</h2>
+            <div class="form-group">
+                <input type="text" class="input-field" id="usernameToView" 
+                       placeholder="Enter username to view their wishlist">
+            </div>
+            <button class="button" onclick="viewWishlist()">View Wishlist</button>
+            <button class="button" onclick="showSection('welcomeSection')">Back to Menu</button>
+            <div id="viewWishlistResult"></div>
+        </section>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand();
-        tg.MainButton.setText('Create Wishlist');
-        tg.MainButton.show();
+
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+        }
 
         function submitWishlist() {
             const wishlistData = {
-                birthday: document.getElementById('birthday').value,
-                interests: document.getElementById('interests').value.split(',').map(i => i.trim()),
-                likes: document.getElementById('likes').value.split(',').map(i => i.trim()),
-                dislikes: document.getElementById('dislikes').value.split(',').map(i => i.trim())
+                action: 'create',
+                data: {
+                    birthday: document.getElementById('birthday').value,
+                    interests: document.getElementById('interests').value.split(',').map(i => i.trim()),
+                    likes: document.getElementById('likes').value.split(',').map(i => i.trim()),
+                    dislikes: document.getElementById('dislikes').value.split(',').map(i => i.trim())
+                }
             };
             tg.sendData(JSON.stringify(wishlistData));
+            tg.close();
+        }
+
+        function viewWishlist() {
+            const username = document.getElementById('usernameToView').value;
+            const viewData = {
+                action: 'view',
+                username: username
+            };
+            tg.sendData(JSON.stringify(viewData));
             tg.close();
         }
     </script>
