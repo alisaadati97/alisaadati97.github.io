@@ -104,11 +104,9 @@
         tg.expand();
 
         function showSection(sectionId) {
-            // Hide all sections
             document.querySelectorAll('.section').forEach(section => {
                 section.classList.remove('active');
             });
-            // Show selected section
             document.getElementById(sectionId).classList.add('active');
         }
 
@@ -122,8 +120,21 @@
                     dislikes: document.getElementById('dislikes').value.split(',').map(i => i.trim())
                 }
             };
+
+            // Clear the form
+            document.getElementById('birthday').value = '';
+            document.getElementById('interests').value = '';
+            document.getElementById('likes').value = '';
+            document.getElementById('dislikes').value = '';
+
+            // Show success message
+            alert('✅ Wishlist created successfully!');
+            
+            // Return to welcome section
+            showSection('welcomeSection');
+            
+            // Send data to bot
             tg.sendData(JSON.stringify(wishlistData));
-            tg.close();
         }
 
         function viewWishlist() {
@@ -132,8 +143,21 @@
                 action: 'view',
                 username: username
             };
+
+            // Display result in the viewWishlistResult div
+            document.getElementById('viewWishlistResult').innerHTML = 
+                `🎁 Fetching wishlist for @${username}...`;
+
+            // Clear the input
+            document.getElementById('usernameToView').value = '';
+            
+            // Send data to bot
             tg.sendData(JSON.stringify(viewData));
-            tg.close();
+
+            // Add slight delay before returning to menu
+            setTimeout(() => {
+                showSection('welcomeSection');
+            }, 2000);
         }
     </script>
 </body>
