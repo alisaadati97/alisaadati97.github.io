@@ -144,6 +144,10 @@
                 return;
             }
 
+            // Show loading message
+            document.getElementById('viewWishlistResult').innerHTML = 
+                `🔍 Fetching wishlist for @${username}...`;
+
             const viewData = {
                 action: 'view',
                 username: username
@@ -152,7 +156,7 @@
             // Send data to bot
             tg.sendData(JSON.stringify(viewData));
             
-            // Clear the input
+            // Clear just the input field, but stay on the same section
             document.getElementById('usernameToView').value = '';
         }
     </script>
