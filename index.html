@@ -139,25 +139,21 @@
 
         function viewWishlist() {
             const username = document.getElementById('usernameToView').value;
+            if (!username) {
+                alert('Please enter a username');
+                return;
+            }
+
             const viewData = {
                 action: 'view',
                 username: username
             };
 
-            // Display result in the viewWishlistResult div
-            document.getElementById('viewWishlistResult').innerHTML = 
-                `🎁 Fetching wishlist for @${username}...`;
-
-            // Clear the input
-            document.getElementById('usernameToView').value = '';
-            
             // Send data to bot
             tg.sendData(JSON.stringify(viewData));
-
-            // Add slight delay before returning to menu
-            setTimeout(() => {
-                showSection('welcomeSection');
-            }, 2000);
+            
+            // Clear the input
+            document.getElementById('usernameToView').value = '';
         }
     </script>
 </body>
