@@ -63,6 +63,7 @@
             <button class="button" onclick="showSection('createWishlist')">📝 Create Wishlist</button>
             <button class="button" onclick="showSection('viewWishlist')">🔍 View Wishlist</button>
             <button class="button" onclick="testConnection()" style="background-color: #ff9800;">🔄 Test Connection</button>
+            <button class="button" onclick="showSection('debugSection')" style="background-color: #607d8b;">🔧 Debug Info</button>
         </section>
 
         <!-- Create Wishlist Section -->
@@ -101,6 +102,14 @@
             <button class="button" onclick="showSection('welcomeSection')">Back to Menu</button>
             <div id="viewWishlistResult"></div>
         </section>
+
+        <!-- Debug Section -->
+        <section id="debugSection" class="section">
+            <h2>🔧 Debug Information</h2>
+            <div id="debugInfo" style="white-space: pre-line; font-family: monospace; font-size: 12px; background: var(--tg-theme-secondary-bg-color); padding: 10px; border-radius: 8px; margin-bottom: 15px;"></div>
+            <button class="button" onclick="refreshDebugInfo()">Refresh Debug Info</button>
+            <button class="button" onclick="showSection('welcomeSection')">Back to Menu</button>
+        </section>
     </div>
 
     <script>
@@ -117,11 +126,24 @@
             isExpanded: tg.isExpanded
         });
         
-        // Expand the Web App to full height
-        tg.expand();
-        
-        // Notify Telegram that the Web App is ready
-        tg.ready();
+        // Configure the Web App
+        document.addEventListener('DOMContentLoaded', function() {
+            // Expand the Web App to full height
+            tg.expand();
+            
+            // Set up the main button (hidden by default)
+            tg.MainButton.setParams({
+                text: 'SEND DATA',
+                color: '#2cab37',
+                text_color: '#ffffff',
+                is_visible: false
+            });
+            
+            // Notify Telegram that the Web App is ready
+            tg.ready();
+            
+            console.log('Telegram WebApp fully initialized');
+        });
 
         function showSection(sectionId) {
             document.querySelectorAll('.section').forEach(section => {
@@ -163,14 +185,21 @@
                 // Show success message
                 alert('✅ Wishlist created successfully! The web app will now close.');
                 
-                // Send data to bot and close
-                tg.sendData(JSON.stringify(wishlistData));
-                console.log('Data sent successfully');
+                // Use MainButton to trigger data sending
+                tg.MainButton.setText('Saving wishlist...');
+                tg.MainButton.show();
                 
-                // Close the web app after sending data
+                // Set a small delay to ensure UI updates before sending data
                 setTimeout(() => {
-                    tg.close();
-                }, 1000);
+                    // Send data to bot
+                    tg.sendData(JSON.stringify(wishlistData));
+                    console.log('Data sent successfully');
+                    
+                    // Close the web app after sending data
+                    setTimeout(() => {
+                        tg.close();
+                    }, 500);
+                }, 300);
                 
             } catch (error) {
                 console.error('Error sending data:', error);
@@ -205,14 +234,21 @@
                 // Show a message to the user before sending data
                 alert('The wishlist will appear in the chat. The web app will now close.');
 
-                // Send data to bot and close the web app
-                tg.sendData(JSON.stringify(viewData));
-                console.log('Data sent successfully');
+                // Use MainButton to trigger data sending
+                tg.MainButton.setText('Sending data...');
+                tg.MainButton.show();
                 
-                // Close the web app after sending data
+                // Set a small delay to ensure UI updates before sending data
                 setTimeout(() => {
-                    tg.close();
-                }, 1000);
+                    // Send data to bot
+                    tg.sendData(JSON.stringify(viewData));
+                    console.log('Data sent successfully');
+                    
+                    // Close the web app after sending data
+                    setTimeout(() => {
+                        tg.close();
+                    }, 500);
+                }, 300);
 
             } catch (error) {
                 console.error('Error sending data:', error);
@@ -221,16 +257,6 @@
             }
         }
 
-        // Add initialization check
-        window.onload = function() {
-            if (window.Telegram.WebApp) {
-                window.Telegram.WebApp.ready();
-                console.log('Telegram WebApp initialized');
-            } else {
-                console.error('Telegram WebApp not available');
-            }
-        }
-        
         // Test connection function
         function testConnection() {
             try {
@@ -245,19 +271,85 @@
                 // Show alert
                 alert('Sending test data to the bot. The web app will close after sending.');
                 
-                // Send test data
-                tg.sendData(JSON.stringify(testData));
+                // Use MainButton to trigger data sending
+                tg.MainButton.setText('Testing connection...');
+                tg.MainButton.show();
                 
-                // Close the web app after sending data
+                // Set a small delay to ensure UI updates before sending data
                 setTimeout(() => {
-                    tg.close();
-                }, 1000);
+                    // Send test data
+                    tg.sendData(JSON.stringify(testData));
+                    console.log('Test data sent successfully');
+                    
+                    // Close the web app after sending data
+                    setTimeout(() => {
+                        tg.close();
+                    }, 500);
+                }, 300);
                 
             } catch (error) {
                 console.error('Test connection error:', error);
                 alert(`Test connection error: ${error.message}`);
             }
         }
+        
+        // Debug info function
+        function refreshDebugInfo() {
+            try {
+                const debugElement = document.getElementById('debugInfo');
+                
+                // Get Telegram Web App information
+                const info = {
+                    version: tg.version || 'Not available',
+                    platform: tg.platform || 'Not available',
+                    colorScheme: tg.colorScheme || 'Not available',
+                    viewportHeight: tg.viewportHeight || 'Not available',
+                    viewportStableHeight: tg.viewportStableHeight || 'Not available',
+                    isExpanded: tg.isExpanded || false,
+                    initDataUnsafe: tg.initDataUnsafe || 'Not available'
+                };
+                
+                // Format the debug information
+                let debugText = '📱 Telegram Web App Debug Info:\n\n';
+                
+                for (const [key, value] of Object.entries(info)) {
+                    if (key === 'initDataUnsafe' && typeof value === 'object') {
+                        debugText += `${key}:\n`;
+                        for (const [subKey, subValue] of Object.entries(value)) {
+                            if (subKey === 'user' && subValue) {
+                                debugText += `  user:\n`;
+                                for (const [userKey, userValue] of Object.entries(subValue)) {
+                                    debugText += `    ${userKey}: ${userValue}\n`;
+                                }
+                            } else {
+                                debugText += `  ${subKey}: ${JSON.stringify(subValue)}\n`;
+                            }
+                        }
+                    } else {
+                        debugText += `${key}: ${JSON.stringify(value)}\n`;
+                    }
+                }
+                
+                // Add connection test instructions
+                debugText += '\n🔄 Connection Test Instructions:\n';
+                debugText += '1. Go back to the main menu\n';
+                debugText += '2. Click "Test Connection"\n';
+                debugText += '3. Check if you receive a response in the chat\n';
+                
+                // Display the debug information
+                debugElement.textContent = debugText;
+                
+            } catch (error) {
+                console.error('Debug info error:', error);
+                document.getElementById('debugInfo').textContent = `Error getting debug info: ${error.message}`;
+            }
+        }
+        
+        // Initialize debug info when the section is shown
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listener to refresh debug info when the section is shown
+            document.querySelector('button[onclick="showSection(\'debugSection\')"]').addEventListener('click', refreshDebugInfo);
+        });
     </script>
 </body>
 </html>
