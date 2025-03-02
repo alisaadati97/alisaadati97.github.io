@@ -89,6 +89,9 @@
         <!-- View Wishlist Section -->
         <section id="viewWishlist" class="section">
             <h2>🔍 View Wishlist</h2>
+            <p style="margin-bottom: 15px; color: var(--tg-theme-hint-color);">
+                Enter a username to view their wishlist. The result will appear in the Telegram chat after you submit.
+            </p>
             <div class="form-group">
                 <input type="text" class="input-field" id="usernameToView" 
                        placeholder="Enter username to view their wishlist">
@@ -161,9 +164,17 @@
                     throw new Error('Telegram WebApp not initialized');
                 }
 
-                // Send data to bot
+                // Show a message to the user before sending data
+                alert('The wishlist will appear in the chat. The web app will now close.');
+
+                // Send data to bot and close the web app
                 window.Telegram.WebApp.sendData(JSON.stringify(viewData));
                 console.log('Data sent successfully');
+                
+                // Close the web app after sending data
+                setTimeout(() => {
+                    window.Telegram.WebApp.close();
+                }, 500);
 
             } catch (error) {
                 console.error('Error sending data:', error);
