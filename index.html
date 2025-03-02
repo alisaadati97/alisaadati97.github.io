@@ -62,6 +62,7 @@
             <p class="welcome-text">What would you like to do?</p>
             <button class="button" onclick="showSection('createWishlist')">📝 Create Wishlist</button>
             <button class="button" onclick="showSection('viewWishlist')">🔍 View Wishlist</button>
+            <button class="button" onclick="testConnection()" style="background-color: #ff9800;">🔄 Test Connection</button>
         </section>
 
         <!-- Create Wishlist Section -->
@@ -227,6 +228,34 @@
                 console.log('Telegram WebApp initialized');
             } else {
                 console.error('Telegram WebApp not available');
+            }
+        }
+        
+        // Test connection function
+        function testConnection() {
+            try {
+                const testData = {
+                    action: 'test',
+                    timestamp: new Date().toISOString(),
+                    message: 'This is a test message from the web app'
+                };
+                
+                console.log('Sending test data to bot:', JSON.stringify(testData));
+                
+                // Show alert
+                alert('Sending test data to the bot. The web app will close after sending.');
+                
+                // Send test data
+                tg.sendData(JSON.stringify(testData));
+                
+                // Close the web app after sending data
+                setTimeout(() => {
+                    tg.close();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Test connection error:', error);
+                alert(`Test connection error: ${error.message}`);
             }
         }
     </script>
